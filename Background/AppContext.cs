@@ -15,8 +15,8 @@ namespace Background
         {
             if (text.Length >= 128) throw new ArgumentOutOfRangeException("Text limited to 127 characters");
             Type t = typeof(NotifyIcon);
-            System.Reflection.BindingFlags hidden = 
-                System.Reflection.BindingFlags.NonPublic |System.Reflection.BindingFlags.Instance;
+            System.Reflection.BindingFlags hidden =
+                System.Reflection.BindingFlags.NonPublic | System.Reflection.BindingFlags.Instance;
             t.GetField("text", hidden).SetValue(ni, text);
             if ((bool)t.GetField("added", hidden).GetValue(ni))
                 t.GetMethod("UpdateIcon", hidden).Invoke(ni, new object[] { true });
@@ -34,7 +34,7 @@ namespace Background
 
         System.Threading.Timer timer;
         NotifyIcon notify;
-        bool AutostartEnable = false;
+        bool AutostartEnable;
 
         [DllImport("user32.dll", CharSet = CharSet.Auto)]
         static extern int SystemParametersInfo(int uAction, int uParam, string lpvParam, int fuWinIni);
@@ -42,6 +42,8 @@ namespace Background
 
         public AppContext()
         {
+            AutostartEnable = AutostartIsEnable();
+
             notify = new NotifyIcon();
             notify.Icon = Properties.Resources.image;
             notify.Text = "Himawari";
@@ -56,13 +58,13 @@ namespace Background
             var menuItem1 = new MenuItem();
             var menuItem2 = new MenuItem();
             var menuItem3 = new MenuItem();
-            
+
             menuItem1.Index = 0;
             menuItem1.Text = "R&estart";
-            menuItem1.Click += (o,e) => Application.Restart();
+            menuItem1.Click += (o, e) => Application.Restart();
 
-            menuItem2.Index = 2;
-            menuItem2.Text = AutostartIsEnable() ? "Disable autostart":"Enable autostart";
+            menuItem2.Index = 1;
+            menuItem2.Text = AutostartEnable ? "Disable autostart" : "Enable autostart";
             menuItem2.Click += (o, e) =>
             {
                 if (AutostartEnable)
@@ -78,10 +80,10 @@ namespace Background
                     menuItem2.Text = "Disable autostart";
                 }
             };
-            
-            menuItem2.Index = 2;
-            menuItem2.Text = "E&xit";
-            menuItem2.Click += (o, e) => Environment.Exit(0);
+
+            menuItem3.Index = 2;
+            menuItem3.Text = "E&xit";
+            menuItem3.Click += (o, e) => Environment.Exit(0);
 
             contextMenu1.MenuItems.AddRange(
                         new MenuItem[] { menuItem1, menuItem2, menuItem3 });
@@ -97,13 +99,10 @@ namespace Background
 
             string url = getUrl();
             Image img = null;
-            try {
+            try
+            {
                 img = DownloadImg(url);
-            }
-            catch (TimeoutException te) {
-                Status.Message = "Connection problem\n";
-                Status.Message += te.Message;
-                success = false;
+                setWallpaper(img);
             }
             catch (Exception e)
             {
@@ -111,18 +110,7 @@ namespace Background
                 Status.Message += e.Message;
                 success = false;
             }
-            try
-            {
-                img.Save("im.png", System.Drawing.Imaging.ImageFormat.Png);
-            }
-            catch (Exception e)
-            {
-                Status.Message = e.GetType().ToString();
-                Status.Message += e.Message;
-                success = false;
-            }
-            setWallpaper(img);
-            img.Dispose();
+
 
             if (success)
             {
@@ -131,10 +119,14 @@ namespace Background
                 notify.SetNotifyIconText(Status.GetReport());
             }
             else
-                notify.SetNotifyIconText(Status.Message);
+                notify.SetNotifyIconText(Status.Message
+                    +"\n Next try: " +
+                    Status.LastTry.AddMinutes(10).ToString("HH:mm::ss"));
+            if (img != null) img.Dispose();
+            GC.Collect();
         }
 
-       
+
         string getUrl()
         {
             var dtNow = DateTime.Now.ToUniversalTime();
@@ -148,21 +140,19 @@ namespace Background
             Image result = new Bitmap(BLOCK_WIDTH * IMAGE_LEVEL, BLOCK_WIDTH * IMAGE_LEVEL);
             Graphics graph = Graphics.FromImage(result);
 
-                for (int y = 0; y < IMAGE_LEVEL; y++)
-                    for (int x = 0; x < IMAGE_LEVEL; x++)
-                    {
-                        string fullUrl = url + '_' + x + '_' + y + ".png";
-                        var wr = System.Net.WebRequest.CreateHttp(fullUrl);
-                        wr.Timeout = 30000;
+            for (int y = 0; y < IMAGE_LEVEL; y++)
+                for (int x = 0; x < IMAGE_LEVEL; x++)
+                {
+                    string fullUrl = url + '_' + x + '_' + y + ".png";
+                    var wr = System.Net.WebRequest.CreateHttp(fullUrl);
+                    wr.Timeout = 30000;
 
-                        var resp = wr.GetResponse();
-                        Image block = Image.FromStream(resp.GetResponseStream());
-                        graph.DrawImage(block, x * BLOCK_WIDTH, y * BLOCK_WIDTH, BLOCK_WIDTH, BLOCK_WIDTH);
-                        block.Dispose();
-                        resp.Dispose();
-                    }
-            
-         
+                    var resp = wr.GetResponse();
+                    Image block = Image.FromStream(resp.GetResponseStream());
+                    graph.DrawImage(block, x * BLOCK_WIDTH, y * BLOCK_WIDTH, BLOCK_WIDTH, BLOCK_WIDTH);
+                    block.Dispose();
+                    resp.Dispose();
+                }
             return result;
         }
 
@@ -179,6 +169,7 @@ namespace Background
                 Directory.CreateDirectory(path);
 
             string fullImName = path + @"himawari.jpg";
+
             img.Save(fullImName,
                 System.Drawing.Imaging.ImageFormat.Jpeg);
 
@@ -195,8 +186,8 @@ namespace Background
 
         void EnableAutoStart()
         {
-            string pathToExeFile = Application.ExecutablePath;
-            Registry.CurrentUser.CreateSubKey(RUN_LOCATION).SetValue(VALUE_NAME, (object)(pathToExeFile));
+            string ExecutablePath = Application.ExecutablePath;
+            Registry.CurrentUser.CreateSubKey(RUN_LOCATION).SetValue(VALUE_NAME, ExecutablePath);
         }
         void DisableAutoStart()
         {
@@ -204,7 +195,7 @@ namespace Background
         }
         bool AutostartIsEnable()
         {
-            return Registry.CurrentUser.OpenSubKey(RUN_LOCATION, false) == null;
+            return Registry.CurrentUser.OpenSubKey(RUN_LOCATION, false) != null;    
         }
 
     }
