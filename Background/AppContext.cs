@@ -22,7 +22,7 @@ namespace Background
                 t.GetMethod("UpdateIcon", hidden).Invoke(ni, new object[] { true });
         }
     }
-    class AppContext : System.Windows.Forms.ApplicationContext
+    class AppContext : ApplicationContext
     {
         private static readonly int UPDATE_PERIOD = 600000;
         private static readonly int IMAGE_LEVEL = 4;
@@ -54,7 +54,7 @@ namespace Background
         }
         public ContextMenu CreateContextMenu()
         {
-            var contextMenu1 = new ContextMenu();
+            var menu = new ContextMenu();
             var menuItem1 = new MenuItem();
             var menuItem2 = new MenuItem();
             var menuItem3 = new MenuItem();
@@ -83,12 +83,12 @@ namespace Background
 
             menuItem3.Index = 2;
             menuItem3.Text = "E&xit";
-            menuItem3.Click += (o, e) => Environment.Exit(0);
+            menuItem3.Click += (o, e) => { Environment.Exit(0); timer.Dispose(); };
 
-            contextMenu1.MenuItems.AddRange(
+            menu.MenuItems.AddRange(
                         new MenuItem[] { menuItem1, menuItem2, menuItem3 });
 
-            return contextMenu1;
+            return menu;
         }
 
         private void Update(object arg)
@@ -138,19 +138,23 @@ namespace Background
         private Image DownloadImg(string url)
         {
             Image result = new Bitmap(BLOCK_WIDTH * IMAGE_LEVEL, BLOCK_WIDTH * IMAGE_LEVEL);
+            Image block = null;
             Graphics graph = Graphics.FromImage(result);
 
             for (int y = 0; y < IMAGE_LEVEL; y++)
                 for (int x = 0; x < IMAGE_LEVEL; x++)
                 {
                     string fullUrl = url + '_' + x + '_' + y + ".png";
-                    var wr = System.Net.WebRequest.CreateHttp(fullUrl);
-                    wr.Timeout = 30000;
+                    var wr = System.Net.WebRequest.Create(fullUrl);
+                    wr.Timeout = 5000;
 
-                    var resp = wr.GetResponse();
-                    Image block = Image.FromStream(resp.GetResponseStream());
+                    var resp = (System.Net.HttpWebResponse)wr.GetResponse();
+                    if (resp.StatusCode == System.Net.HttpStatusCode.OK)
+                        block = Image.FromStream(resp.GetResponseStream());
+                    else
+                        throw new Exception("Could not load image");
                     graph.DrawImage(block, x * BLOCK_WIDTH, y * BLOCK_WIDTH, BLOCK_WIDTH, BLOCK_WIDTH);
-                    block.Dispose();
+                    if (block != null ) block.Dispose();
                     resp.Dispose();
                 }
             return result;
