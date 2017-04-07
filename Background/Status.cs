@@ -21,7 +21,7 @@ namespace Background
             if (NowUpdating)
                 sb.AppendLine("Himawari (updating)");
             else
-                sb.AppendLine("Himawari");
+                sb.AppendLine("Himawari"); ;
             sb.Append("Last succes update ");
             sb.AppendLine(LastSucces != DateTime.MinValue ? LastSucces.ToString("HH:mm:ss") : "never");
             sb.Append("Next update ");
