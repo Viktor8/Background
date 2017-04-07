@@ -48,6 +48,7 @@ namespace Background
             notify.Icon = Properties.Resources.image;
             notify.Text = "Himawari";
             notify.Visible = true;
+            notify.Click += (o, e) => notify.SetNotifyIconText(Status.GetReport());
             notify.ContextMenu = CreateContextMenu();
 
             timer = new System.Threading.Timer(Update, null, 0, UPDATE_PERIOD);
@@ -96,11 +97,14 @@ namespace Background
             bool success = true;
             Status.TotalCount++;
             Status.LastTry = DateTime.Now;
+            Status.NowUpdating = true;
+            notify.SetNotifyIconText(Status.GetReport());
 
-            string url = getUrl();
+
             Image img = null;
             try
             {
+                string url = getUrl();
                 img = DownloadImg(url);
                 setWallpaper(img);
             }
@@ -110,6 +114,7 @@ namespace Background
                 Status.Message += e.Message;
                 success = false;
             }
+            Status.NowUpdating = false;
 
 
             if (success)
@@ -132,6 +137,10 @@ namespace Background
             var dtNow = DateTime.Now.ToUniversalTime();
             dtNow = dtNow.AddMinutes(-30 - dtNow.Minute % 10).AddSeconds(-dtNow.Second);
 
+            var JapanTime = dtNow.AddHours(9);
+            if (JapanTime.AddMinutes(-20).Hour == 23)
+                throw new Exception("Image not available via satellite position.");
+
             return BASE_URL + IMAGE_LEVEL + "d/" + BLOCK_WIDTH + '/' +
                 dtNow.ToString(@"yyyy\/MM\/dd\/HHmmss");
         }
@@ -146,15 +155,19 @@ namespace Background
                 {
                     string fullUrl = url + '_' + x + '_' + y + ".png";
                     var wr = System.Net.WebRequest.Create(fullUrl);
-                    wr.Timeout = 5000;
+                    wr.Timeout = 30000;
 
                     var resp = (System.Net.HttpWebResponse)wr.GetResponse();
                     if (resp.StatusCode == System.Net.HttpStatusCode.OK)
-                        block = Image.FromStream(resp.GetResponseStream());
+                    {
+                        var s = resp.GetResponseStream();
+                        block = Image.FromStream(s);
+                    }
                     else
                         throw new Exception("Could not load image");
                     graph.DrawImage(block, x * BLOCK_WIDTH, y * BLOCK_WIDTH, BLOCK_WIDTH, BLOCK_WIDTH);
                     if (block != null ) block.Dispose();
+                    
                     resp.Dispose();
                 }
             return result;

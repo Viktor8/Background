@@ -8,6 +8,7 @@ namespace Background
 {
     class Status
     {
+        public static bool NowUpdating { get; set; }
         public static string Message { get; set; } 
         public static DateTime LastSucces { get; set; }
         public static DateTime LastTry { get; set; }
@@ -17,7 +18,10 @@ namespace Background
         public static string GetReport()
         {
             StringBuilder sb = new StringBuilder();
-            sb.AppendLine("Himawari");
+            if (NowUpdating)
+                sb.AppendLine("Himawari (updating)");
+            else
+                sb.AppendLine("Himawari");
             sb.Append("Last succes update ");
             sb.AppendLine(LastSucces != DateTime.MinValue ? LastSucces.ToString("HH:mm:ss") : "never");
             sb.Append("Next update ");
