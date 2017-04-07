@@ -9,7 +9,7 @@ namespace Background
         /// The main entry point for the application.
         /// </summary>
         [STAThread]
-        static void Main()
+        static void Main()  
         {
             bool isFirst;
             new System.Threading.Mutex(false, System.Reflection.Assembly.
