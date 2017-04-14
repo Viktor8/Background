@@ -136,9 +136,11 @@ namespace Background
         {
             var dtNow = DateTime.Now.ToUniversalTime();
             dtNow = dtNow.AddMinutes(-30 - dtNow.Minute % 10).AddSeconds(-dtNow.Second);
+         
 
-            var JapanTime = dtNow.AddHours(9);
-            if (JapanTime.AddMinutes(-20).Hour == 23)
+            var JapanTime = dtNow.AddHours(9).AddSeconds(-1);
+            if(JapanTime.TimeOfDay > DateTime.Parse(@"09.04.2017 22:50:00").TimeOfDay && 
+                JapanTime.TimeOfDay < DateTime.Parse("09.04.2017 23:50:00").TimeOfDay)
                 throw new Exception("Image not available via satellite position.");
 
             return BASE_URL + IMAGE_LEVEL + "d/" + BLOCK_WIDTH + '/' +
