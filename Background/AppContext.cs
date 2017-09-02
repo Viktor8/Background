@@ -35,6 +35,7 @@ namespace Background
         System.Threading.Timer timer;
         NotifyIcon notify;
         bool AutostartEnable;
+        bool isEnabled;
 
         [DllImport("user32.dll", CharSet = CharSet.Auto)]
         static extern int SystemParametersInfo(int uAction, int uParam, string lpvParam, int fuWinIni);
@@ -43,6 +44,7 @@ namespace Background
         public AppContext()
         {
             AutostartEnable = AutostartIsEnable();
+            isEnabled = true;
 
             notify = new NotifyIcon();
             notify.Icon = Properties.Resources.image;
@@ -51,14 +53,33 @@ namespace Background
             notify.Click += (o, e) => notify.SetNotifyIconText(Status.GetReport());
             notify.ContextMenu = CreateContextMenu();
 
+            
             timer = new System.Threading.Timer(Update, null, 0, UPDATE_PERIOD);
         }
         public ContextMenu CreateContextMenu()
         {
             var menu = new ContextMenu();
+            var menuItem0 = new MenuItem();
             var menuItem1 = new MenuItem();
             var menuItem2 = new MenuItem();
             var menuItem3 = new MenuItem();
+
+            menuItem0.Index = 0;
+            menuItem0.Text = isEnabled ? "Disable updating" : "Enable updating";
+            menuItem0.Click += (o, e) =>
+            {
+                if (isEnabled)
+                {
+                    isEnabled = false;
+                    menuItem0.Text = "Enable updating";
+                }
+                else
+                {
+                    isEnabled = true;
+                    menuItem0.Text = "Disable updating";
+                }
+
+            };
 
             menuItem1.Index = 0;
             menuItem1.Text = "R&estart";
@@ -87,13 +108,19 @@ namespace Background
             menuItem3.Click += (o, e) => { Environment.Exit(0); timer.Dispose(); };
 
             menu.MenuItems.AddRange(
-                        new MenuItem[] { menuItem1, menuItem2, menuItem3 });
+                        new MenuItem[] { menuItem0, menuItem1, menuItem2, menuItem3 });
 
             return menu;
         }
 
         private void Update(object arg)
         {
+            if (!isEnabled)
+            {
+                Status.Message = "Himawari\nLast update: {0,HH:mm:ss}.\nUpdating disabled";
+                notify.SetNotifyIconText(Status.Message);
+                return;
+            }
             bool success = true;
             Status.TotalCount++;
             Status.LastTry = DateTime.Now;
