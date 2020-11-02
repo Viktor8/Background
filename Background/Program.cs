@@ -17,7 +17,7 @@ namespace Background
                 out isFirst);
             if (!isFirst)
             {
-                MessageBox.Show("Програма вже запущена");
+                MessageBox.Show("The app is already running");
                 Environment.Exit(0);
             }
 
